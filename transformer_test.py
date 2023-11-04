@@ -20,8 +20,9 @@
 import unittest
 import torch
 
-from pytorch_robotics_transformer.transformer import Transformer
+from transformer import Transformer
 from absl.testing import parameterized
+
 
 class TransformerTest(parameterized.TestCase, unittest.TestCase):
 
@@ -50,7 +51,6 @@ class TransformerTest(parameterized.TestCase, unittest.TestCase):
             self.assertNotEmpty(attention_scores)
         else:
             self.assertEmpty(attention_scores)
-
 
 
 if __name__ == '__main__':

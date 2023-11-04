@@ -1,5 +1,4 @@
-
-# Subject to the terms and conditions of the Apache License, Version 2.0 that the original code follows, 
+# Subject to the terms and conditions of the Apache License, Version 2.0 that the original code follows,
 # I have retained the following copyright notice written on it.
 
 # Copyright 2022 Google LLC
@@ -34,6 +33,7 @@ HEIGHT = 256
 WIDTH = 320
 NUM_IMAGE_TOKENS = 2
 
+
 # For now, we use one type of spaces.
 def space_names_list() -> List[str]:
     """Lists the different types of spaces accepted by the transformer."""
@@ -45,14 +45,15 @@ def state_space_list() -> List[spaces.Dict]:
     # This will be input_tensor_spec
     state_space = spaces.Dict(
         {
-            'image': spaces.Box(low=0.0, high=1.0, 
-                            shape=(3, HEIGHT, WIDTH), dtype=np.float32),
-            'natural_language_embedding': spaces.Box(low=-np.inf, high=np.inf, 
-                            shape=[512], dtype=np.float32)
+            'image': spaces.Box(low=0.0, high=1.0,
+                                shape=(3, HEIGHT, WIDTH), dtype=np.float32),
+            'natural_language_embedding': spaces.Box(low=-np.inf, high=np.inf,
+                                                     shape=[512], dtype=np.float32)
         }
     )
 
     return [state_space]
+
 
 def observations_list(training: bool = True) -> List[Dict[str, torch.Tensor]]:
     """Lists the different types of observations accepted by the transformer."""
@@ -64,29 +65,31 @@ def observations_list(training: bool = True) -> List[Dict[str, torch.Tensor]]:
         image_shape = [1, 3, HEIGHT, WIDTH]
         emb_shape = [1, 512]
     return [
-            {
-                'image': torch.full(image_shape, 0.5),
-                'natural_language_embedding': torch.full(emb_shape, 1.0)
-            }
-        ]
+        {
+            'image': torch.full(image_shape, 0.5),
+            'natural_language_embedding': torch.full(emb_shape, 1.0)
+        }
+    ]
+
 
 NAME_TO_STATE_SPACES = dict(zip(space_names_list(), state_space_list()))
 NAME_TO_OBSERVATIONS = dict(zip(space_names_list(), observations_list()))
 NAME_TO_INF_OBSERVATIONS = dict(
     zip(space_names_list(), observations_list(False)))
 
+
 # This class will be inherited by TransformerNetworkTestUtils in transformer_network_test.py.
 class TransformerNetworkTestUtils(parameterized.TestCase, unittest.TestCase):
     """Defines spaces, SequenceAgent, and various other testing utilities."""
 
     def _define_spaces(self,
-                train_batch_size=BATCH_SIZE,
-                inference_batch_size=1,
-                time_sequence_length=TIME_SEQUENCE_LENGTH,
-                inference_sequence_length=TIME_SEQUENCE_LENGTH,
-                token_embedding_size=512,
-                image_width=WIDTH,
-                image_height=HEIGHT):
+                       train_batch_size=BATCH_SIZE,
+                       inference_batch_size=1,
+                       time_sequence_length=TIME_SEQUENCE_LENGTH,
+                       inference_sequence_length=TIME_SEQUENCE_LENGTH,
+                       token_embedding_size=512,
+                       image_width=WIDTH,
+                       image_height=HEIGHT):
         """Defines spaces and observations (both training and inference)."""
 
         self.train_batch_size = train_batch_size
@@ -99,25 +102,25 @@ class TransformerNetworkTestUtils(parameterized.TestCase, unittest.TestCase):
         # So we define action_space with OrderedDict.
         action_space = spaces.Dict(
             OrderedDict([
-                ('terminate_episode', spaces.Discrete(2)), 
-                ('world_vector', spaces.Box(low= -1.0, high= 1.0, shape=(3,), dtype=np.float32)),
-                ('rotation_delta', spaces.Box(low= -np.pi / 2, high= np.pi / 2, shape=(3,), dtype=np.float32)),
-                ('gripper_closedness_action', spaces.Box(low= -1.0  , high= 1.0, shape=(1,), dtype=np.float32))
-                ])
+                ('terminate_episode', spaces.Discrete(2)),
+                ('world_vector', spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)),
+                ('rotation_delta', spaces.Box(low=-np.pi / 2, high=np.pi / 2, shape=(3,), dtype=np.float32)),
+                ('gripper_closedness_action', spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32))
+            ])
         )
 
         state_space = spaces.Dict(
             {
-                'image': spaces.Box(low=0.0, high=1.0, 
-                                shape=(3, image_height, image_width), dtype=np.float32),
-                'natural_language_embedding': spaces.Box(low=-np.inf, high=np.inf, 
-                                shape=[self.token_embedding_size], dtype=np.float32)
+                'image': spaces.Box(low=0.0, high=1.0,
+                                    shape=(3, image_height, image_width), dtype=np.float32),
+                'natural_language_embedding': spaces.Box(low=-np.inf, high=np.inf,
+                                                         shape=[self.token_embedding_size], dtype=np.float32)
             }
         )
 
         self._policy_info_space = {
-            'return': spaces.Box(low=0.0, high=1.0, shape=(),dtype=np.float32),
-            'discounted_return': spaces.Box(low=0.0, high=1.0, shape=(),dtype=np.float32)
+            'return': spaces.Box(low=0.0, high=1.0, shape=(), dtype=np.float32),
+            'discounted_return': spaces.Box(low=0.0, high=1.0, shape=(), dtype=np.float32)
         }
         self._state_space = state_space
         self._action_space = action_space
@@ -162,5 +165,3 @@ class TransformerNetworkTestUtils(parameterized.TestCase, unittest.TestCase):
     def setUp(self):
         self._define_spaces()
         super().setUp()
-
-        

@@ -27,18 +27,17 @@ import unittest
 import numpy as np
 from typing import Dict
 
-
-from pytorch_robotics_transformer import transformer_network
-from pytorch_robotics_transformer.transformer_network_test_set_up import BATCH_SIZE
-from pytorch_robotics_transformer.transformer_network_test_set_up import NAME_TO_INF_OBSERVATIONS
-from pytorch_robotics_transformer.transformer_network_test_set_up import NAME_TO_STATE_SPACES
-from pytorch_robotics_transformer.transformer_network_test_set_up import observations_list
-from pytorch_robotics_transformer.transformer_network_test_set_up import space_names_list
-from pytorch_robotics_transformer.transformer_network_test_set_up import state_space_list
-from pytorch_robotics_transformer.transformer_network_test_set_up import TIME_SEQUENCE_LENGTH
-from pytorch_robotics_transformer.transformer_network_test_set_up import TransformerNetworkTestUtils
-from pytorch_robotics_transformer.tokenizers.utils import batched_space_sampler
-from pytorch_robotics_transformer.tokenizers.utils import np_to_tensor
+import transformer_network
+from transformer_network_test_set_up import BATCH_SIZE
+from transformer_network_test_set_up import NAME_TO_INF_OBSERVATIONS
+from transformer_network_test_set_up import NAME_TO_STATE_SPACES
+from transformer_network_test_set_up import observations_list
+from transformer_network_test_set_up import space_names_list
+from transformer_network_test_set_up import state_space_list
+from transformer_network_test_set_up import TIME_SEQUENCE_LENGTH
+from transformer_network_test_set_up import TransformerNetworkTestUtils
+from tokenizers.utils import batched_space_sampler
+from tokenizers.utils import np_to_tensor
 
 
 class TransformerNetworkTest(TransformerNetworkTestUtils):
@@ -49,15 +48,14 @@ class TransformerNetworkTest(TransformerNetworkTestUtils):
     } for (name, spec, obs) in zip(space_names_list(), state_space_list(), observations_list())])
     def testTransformerTrainLossCall(self, state_space, train_observation):
         network = transformer_network.TransformerNetwork(
-        input_tensor_space=state_space,
-        output_tensor_space=self._action_space,
-        time_sequence_length=TIME_SEQUENCE_LENGTH)
-
+            input_tensor_space=state_space,
+            output_tensor_space=self._action_space,
+            time_sequence_length=TIME_SEQUENCE_LENGTH)
 
         network.set_actions(self._train_action)
 
         network_state = batched_space_sampler(network._state_space, batch_size=BATCH_SIZE)
-        network_state = np_to_tensor(network_state) # change np.ndarray type of sample values into tensor type
+        network_state = np_to_tensor(network_state)  # change np.ndarray type of sample values into tensor type
 
         output_actions, network_state = network(
             train_observation, network_state=network_state)
@@ -74,17 +72,18 @@ class TransformerNetworkTest(TransformerNetworkTestUtils):
     } for name in space_names_list()])
     def testTransformerInferenceLossCall(self, space_name):
         state_space = NAME_TO_STATE_SPACES[space_name]
-        observation = NAME_TO_INF_OBSERVATIONS[space_name] #  observation has no time dimension unlike during training.
+        observation = NAME_TO_INF_OBSERVATIONS[space_name]  # observation has no time dimension unlike during training.
 
         network = transformer_network.TransformerNetwork(
-        input_tensor_space=state_space,
-        output_tensor_space=self._action_space,
-        time_sequence_length=TIME_SEQUENCE_LENGTH)
+            input_tensor_space=state_space,
+            output_tensor_space=self._action_space,
+            time_sequence_length=TIME_SEQUENCE_LENGTH)
 
-        network.set_actions(self._inference_action) # self._inference_action has no time dimension unlike self._train_action.
+        network.set_actions(
+            self._inference_action)  # self._inference_action has no time dimension unlike self._train_action.
         # inference currently only support batch size of 1
         network_state = batched_space_sampler(network._state_space, batch_size=1)
-        network_state = np_to_tensor(network_state) # change np.ndarray type of sample values into tensor type
+        network_state = np_to_tensor(network_state)  # change np.ndarray type of sample values into tensor type
 
         output_actions, network_state = network(
             observation, network_state=network_state)
@@ -93,15 +92,15 @@ class TransformerNetworkTest(TransformerNetworkTestUtils):
         self.assertCountEqual(self._inference_action.keys(), output_actions.keys())
 
     @parameterized.named_parameters([{
-      'testcase_name': '_' + name,
-      'state_space': spec,
+        'testcase_name': '_' + name,
+        'state_space': spec,
     } for name, spec in zip(space_names_list(), state_space_list())])
     def testTransformerCausality(self, state_space):
         network = transformer_network.TransformerNetwork(
-        input_tensor_space=state_space,
-        output_tensor_space=self._action_space,
-        time_sequence_length=TIME_SEQUENCE_LENGTH,
-        dropout_rate=0.0)
+            input_tensor_space=state_space,
+            output_tensor_space=self._action_space,
+            time_sequence_length=TIME_SEQUENCE_LENGTH,
+            dropout_rate=0.0)
 
         network.eval()
 
@@ -112,25 +111,27 @@ class TransformerNetworkTest(TransformerNetworkTestUtils):
         # size of all_tokens: (time_sequence_length * (tokens_per_image + tokens_per_action)) 
         def _split_image_and_action_tokens(all_tokens):
             image_start_indices = [(tokens_per_image + tokens_per_action) * k
-                             for k in range(time_sequence_length)]
+                                   for k in range(time_sequence_length)]
 
             image_tokens = torch.stack(
                 [all_tokens[i:i + tokens_per_image] for i in image_start_indices],
                 dim=0)
             action_start_indices = [i + tokens_per_image for i in image_start_indices]
             action_tokens = torch.stack([
-                    all_tokens[i:i + tokens_per_action] for i in action_start_indices],
-                    dim=0)
+                all_tokens[i:i + tokens_per_action] for i in action_start_indices],
+                dim=0)
 
             image_tokens = F.one_hot(image_tokens, network._token_embedding_size)
             # Add batch dimension.
-            image_tokens = image_tokens.unsqueeze(0) # image_tokens: (1, time_sequence_length, tokens_per_image, emb_dim)
-            action_tokens = action_tokens.unsqueeze(0) # action: (1, time_sequence_length, tokens_per_action)
+            image_tokens = image_tokens.unsqueeze(
+                0)  # image_tokens: (1, time_sequence_length, tokens_per_image, emb_dim)
+            action_tokens = action_tokens.unsqueeze(0)  # action: (1, time_sequence_length, tokens_per_action)
 
             return image_tokens, action_tokens
 
         # Generate some random tokens for image and actions.
-        all_tokens = torch.randint(low=0, high=10, size=(time_sequence_length * (tokens_per_image + tokens_per_action),))
+        all_tokens = torch.randint(low=0, high=10,
+                                   size=(time_sequence_length * (tokens_per_image + tokens_per_action),))
         context_image_tokens, action_tokens = _split_image_and_action_tokens(all_tokens)
         # Get the output tokens without any zeroed out input tokens.
         # output_tokens: (t*num_tokens, vocab_size)
@@ -141,7 +142,7 @@ class TransformerNetworkTest(TransformerNetworkTestUtils):
             batch_size=1)[0]
 
         for t in range(time_sequence_length *
-                   (tokens_per_image + tokens_per_action)):
+                       (tokens_per_image + tokens_per_action)):
             # Zero out future input tokens.
             all_tokens_at_t = torch.concat([all_tokens[:t + 1], torch.zeros_like(all_tokens[t + 1:])], 0)
             context_image_tokens, action_tokens = _split_image_and_action_tokens(all_tokens_at_t)
@@ -154,7 +155,8 @@ class TransformerNetworkTest(TransformerNetworkTestUtils):
                 batch_size=1)[0]
 
             # The output token is unchanged if future input tokens are zeroed out.
-            np.testing.assert_array_equal(output_tokens[:t + 1].detach().numpy(), output_tokens_at_t[:t + 1].detach().numpy())
+            np.testing.assert_array_equal(output_tokens[:t + 1].detach().numpy(),
+                                          output_tokens_at_t[:t + 1].detach().numpy())
 
 
 if __name__ == '__main__':

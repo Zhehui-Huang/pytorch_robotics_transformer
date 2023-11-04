@@ -18,10 +18,11 @@
 # You can find the original code from here[https://github.com/google-research/robotics_transformer].
 
 
-from gym import spaces
-import torch
+from typing import Dict
 
-from typing import Dict, Union
+import torch
+from gym import spaces
+
 """
 Please define action space using gym.spaces.Dict.
 
@@ -52,7 +53,7 @@ action_space = gym.spaces.Dict(
 Please use OrderedDict if you want gym.spaces.Dict to keep order of actions.
 
 This action_space is just information about each action.
-These information are very convenient when interpreting, examining, cliping, and processing the action
+These information are very convenient when interpreting, examining, clipping, and processing the action
 because the action is dictionary with key names which are the same as the action_space.
 
 action value will be look like
@@ -65,7 +66,8 @@ action = {
 Note that values are int and numpy 1-d arrays.
 """
 
-class RT1ActionTokenizer():
+
+class RT1ActionTokenizer:
     def __init__(self,
                  action_space: spaces.Dict,
                  vocab_size: int):
@@ -78,7 +80,7 @@ class RT1ActionTokenizer():
 
         self._action_space = action_space
         self._vocab_size = vocab_size
-        self._action_order = list(action_space.keys()) # Order of tokenizing
+        self._action_order = list(action_space.keys())  # Order of tokenizing
 
         self._tokens_per_action = 0
         # Calculate the number of tokens per action
@@ -97,7 +99,6 @@ class RT1ActionTokenizer():
             else:
                 raise ValueError('We assume action_space is defined by either gym.spaces.Discrete or gym.spaces.Box')
 
-
     @property
     def tokens_per_action(self) -> int:
         return self._tokens_per_action
@@ -105,15 +106,17 @@ class RT1ActionTokenizer():
     def tokenize(self, action: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Tokenizes an action."""
         action_tokens = []
-        # Perform tokenizing in order of self._action_order 
-        for k in self._action_order: # If a is Discrete, the size of a is () or (batch,), which means the former is scalar of Tensor type and the later is 1-d Tensor.
+        # Perform tokenizing in order of self._action_order
+        # If a is Discrete, the size of a is () or (batch,),
+        # which means the former is scalar of Tensor type and the later is 1-d Tensor.
+        for k in self._action_order:
             a = action[k]
             a_space = self._action_space[k]
             if isinstance(a_space, spaces.Discrete):
                 assert torch.all(a < self._vocab_size), "Discrete action should be smaller than vocab size."
-                token = a #  Discrete action is already token. The size is () or (batch,)
-                token = a.unsqueeze(-1) # The size is (1,) or (batch, 1). Discrete action will be one token.
-            else: # if a is Box, size of a is (action_size) or (batch, action_size).
+                token = a.unsqueeze(-1)  # The size is (1,) or (batch, 1). Discrete action will be one token.
+            else:
+                # if a is Box, size of a is (action_size) or (batch, action_size).
                 low = torch.tensor(a_space.low)
                 high = torch.tensor(a_space.high)
                 a = torch.clamp(a, low, high)
@@ -121,15 +124,15 @@ class RT1ActionTokenizer():
                 token = (a - low) / (high - low)
                 # Bucket and discretize the action to vocab_size.
                 token = token * (self._vocab_size - 1)
-                token = token.to(torch.int32) # The size is (action_size) or (batch, action_size).
-            action_tokens.append(token) # if this action has action_size, this action will be action_size tokens.
-        # Contatenate all actions. The size will be (tokens_per_action) or (batch,  tokens_per_action)
+                token = token.to(torch.int32)  # The size is (action_size) or (batch, action_size).
+            action_tokens.append(token)  # if this action has action_size, this action will be action_size tokens.
+        # Concatenate all actions. The size will be (tokens_per_action) or (batch,  tokens_per_action)
         action_tokens = torch.concat(action_tokens, dim=-1)
         return action_tokens
 
     # The size of action_tokens is (tokens_per_action) or  (batch, tokens_per_action)
     def detokenize(self, action_tokens: torch.Tensor) -> Dict[str, torch.Tensor]:
-        """Detokenizes an action."""
+        """Detokenize an action."""
         action = {}
         token_index = 0
         # action_tokens is in self._action_order order
@@ -138,7 +141,8 @@ class RT1ActionTokenizer():
             # Discrete actions are already assumed to be tokens.
             space = self._action_space[k]
             if isinstance(space, spaces.Discrete):
-                # The size of action_tokens[k] : (1,) or (batch,), which means the former is scalar of Tensor type and the later is 1-d Tensor.
+                # The size of action_tokens[k] : (1,) or (batch,),
+                # which means the former is scalar of Tensor type and the later is 1-d Tensor.
                 action[k] = action_tokens[..., token_index]
                 # A poor model may output tokens outside the allowed range, in that case
                 # set them to a default value, the 0 token in this case.
@@ -148,12 +152,12 @@ class RT1ActionTokenizer():
                 actions = []
                 action_dim = space.shape[0]
                 for j in range(action_dim):
-                    a = action_tokens[..., token_index:token_index + 1] # The size of a: (1,) or (batch, 1)
-                    a = a.to(torch.float32) # Change int32 to float32
+                    a = action_tokens[..., token_index:token_index + 1]  # The size of a: (1,) or (batch, 1)
+                    a = a.to(torch.float32)  # Change int32 to float32
                     # de-normalize
                     a = a / (self._vocab_size - 1)
                     a = a * (space.high[j] - space.low[j]) + space.low[j]
                     actions.append(a)
                     token_index += 1
-                action[k] = torch.concat(actions, dim=-1) # size: (action_dim) or (batch, action_dim)
+                action[k] = torch.concat(actions, dim=-1)  # size: (action_dim) or (batch, action_dim)
         return action

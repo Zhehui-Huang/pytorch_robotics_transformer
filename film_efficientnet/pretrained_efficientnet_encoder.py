@@ -18,9 +18,7 @@
 # You can find the original code from here[https://github.com/google-research/robotics_transformer].
 
 
-
 """Encoder based on Efficientnet."""
-
 
 # film_efficientnet_encoder receive [bs, 3, 300, 300] and returns [bs, 1536, 10, 10]
 # Here we use 1x1 conv. [bs, 1536, 10, 10] -> [bs, 512, 10, 10]
@@ -30,8 +28,9 @@ import torch
 import torch.nn as nn
 from typing import Optional
 
-from pytorch_robotics_transformer.film_efficientnet.film_efficientnet_encoder import EfficientNetB3
-from pytorch_robotics_transformer.film_efficientnet.film_conditioning_layer import FilmConditioning
+from film_efficientnet.film_efficientnet_encoder import EfficientNetB3
+from film_efficientnet.film_conditioning_layer import FilmConditioning
+
 
 class EfficientNetEncoder(nn.Module):
     def __init__(self,
@@ -41,8 +40,9 @@ class EfficientNetEncoder(nn.Module):
                  include_top: bool = False,
                  pooling: bool = True):
         super().__init__()
-        
-        self.conv1x1 = nn.Conv2d(in_channels=1536, # If we use EfficientNetB3 and input image has 3 channels, in_channels is 1536.
+
+        self.conv1x1 = nn.Conv2d(in_channels=1536,
+                                 # If we use EfficientNetB3 and input image has 3 channels, in_channels is 1536.
                                  out_channels=token_embedding_size,
                                  kernel_size=1,
                                  stride=1,
@@ -61,7 +61,6 @@ class EfficientNetEncoder(nn.Module):
             return self.net(image, context)
         return self.net(image)
 
-
     def forward(self, image: torch.Tensor, context: torch.Tensor) -> torch.Tensor:
         features = self._encode(image, context)
         features = self.conv1x1(features)
@@ -71,4 +70,4 @@ class EfficientNetEncoder(nn.Module):
             return features
 
         # Global average pool.
-        return torch.mean(features, dim=(2,3))
+        return torch.mean(features, dim=(2, 3))

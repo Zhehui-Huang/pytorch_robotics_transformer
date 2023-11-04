@@ -17,18 +17,19 @@
 
 # You can find the original code from here[https://github.com/google-research/robotics_transformer].
 
-"""PyTorch implementation of Token Learner(Ryoo et al 2021)."""
+"""PyTorch's implementation of Token Learner(Ryoo et al 2021)."""
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class TokenLearnerModule(nn.Module):
     def __init__(self,
-                inputs_channels: int,
-                num_tokens: int, 
-                bottleneck_dim: int = 64,
-                dropout_rate: float = 0.):
+                 inputs_channels: int,
+                 num_tokens: int,
+                 bottleneck_dim: int = 64,
+                 dropout_rate: float = 0.):
         super().__init__()
 
         self.layerNorm = nn.LayerNorm(inputs_channels)
@@ -70,14 +71,14 @@ class TokenLearnerModule(nn.Module):
         x = self.gelu1(self.conv1(x))
         x = self.dropout1(x)
         x = self.conv2(x)
-        x = self.dropout2(x) # (bs, num_tokens, h, w)
+        x = self.dropout2(x)  # (bs, num_tokens, h, w)
 
-        x = x.view(x.shape[0], x.shape[1], -1) # (bs, num_tokens, h*w)
+        x = x.view(x.shape[0], x.shape[1], -1)  # (bs, num_tokens, h*w)
         weights_maps = F.softmax(x, dim=-1)
 
         # create tokens
         bs, c, h, w = inputs.shape
-        inputs = inputs.permute(0, 2, 3, 1).view(bs, h*w , c)
+        inputs = inputs.permute(0, 2, 3, 1).view(bs, h * w, c)
 
         tokens = torch.bmm(weights_maps, inputs)
         # weighs_maps: [bs, n_token, h*w]
@@ -93,4 +94,3 @@ class TokenLearnerModule(nn.Module):
         # reshape (1, 1, c), then we get a learned token, as shown in Fig. 1 in tokenlearner paper.
         # We do the computation using all other weight map, then we get all tokens.
         return tokens
-
